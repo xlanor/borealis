@@ -34,7 +34,8 @@ const std::string appletFrameXML = R"xml(
         width="auto"
         height="auto"
         axis="column"
-        justifyContent="spaceBetween">
+        justifyContent="spaceBetween"
+        backgroundColor="@theme/brls/background">
 
         <!-- Header -->
         <brls:Box
