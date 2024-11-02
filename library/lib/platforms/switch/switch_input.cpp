@@ -14,8 +14,15 @@
     limitations under the License.
 */
 
+#include <chrono>
+#include <borealis/core/thread.hpp>
 #include <borealis/core/application.hpp>
 #include <borealis/platforms/switch/switch_input.hpp>
+
+// Avoid namespace collision
+#define NXEvent ::Event
+
+using namespace std::chrono_literals;
 
 namespace brls
 {
@@ -98,6 +105,8 @@ static const size_t SWITCH_AXIS_MAPPING[_AXES_MAX] = {
 
 SwitchInputManager::SwitchInputManager()
 {
+    this->screenshot_button_thread = std::jthread(&SwitchInputManager::screenshot_button_thread_fn, this);
+
     padConfigureInput(GAMEPADS_MAX, HidNpadStyleSet_NpadStandard);
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
     hidSetNpadHandheldActivationMode(HidNpadHandheldActivationMode_Single);
@@ -248,6 +257,9 @@ void SwitchInputManager::updateControllerStateInner(ControllerState* state, PadS
         uint64_t switchKey = full ? SWITCH_BUTTONS_FULL_MAPPING[i] : SWITCH_BUTTONS_HALF_MAPPING[i];
         state->buttons[i]  = keysDown & switchKey;
     }
+
+    if (replaceScreenshotWithGuideButton)
+        state->buttons[BUTTON_GUIDE] = isScreenshotPressed;
 
     HidAnalogStickState analog_stick_l = padGetStickPos(pad, 0);
     HidAnalogStickState analog_stick_r = padGetStickPos(pad, 1);
@@ -655,6 +667,67 @@ void SwitchInputManager::hidInitializeKeyboardMap()
             continue;
         m_hid_brls_map[i]       = brlsKey;
         m_brls_hid_map[brlsKey] = i;
+    }
+}
+
+void SwitchInputManager::screenshot_button_thread_fn(std::stop_token token) {
+    // This needs a high priority because we are racing am to clear the event
+    svcSetThreadPriority(CUR_THREAD_HANDLE, 0x20);
+
+    NXEvent screenshot_evt;
+    DEFER([&screenshot_evt] { eventClose(&screenshot_evt); });
+    if (auto rc = hidsysAcquireCaptureButtonEventHandle(&screenshot_evt, false); R_FAILED(rc)) {
+        Logger::error("Failed to acquire the screenshot button event: {}\n", rc);
+        return;
+    }
+
+    NXEvent activity_evt;
+    DEFER([&activity_evt] { eventClose(&activity_evt); });
+    if (auto rc = inssGetWritableEvent(0, &activity_evt); R_FAILED(rc)) {
+        Logger::error("Failed to acquire the activity event: {}\n", rc);
+        return;
+    }
+
+    UTimer activity_timer;
+    DEFER([&activity_timer] { utimerStop(&activity_timer); });
+
+    utimerCreate(&activity_timer, std::chrono::nanoseconds(500ms).count(), TimerType_Repeating);
+    utimerStart(&activity_timer);
+
+    eventClear(&screenshot_evt);
+
+    u64 down_start_tick = 0;
+    while (!token.stop_requested()) {
+        s32 idx;
+        auto rc = waitMulti(&idx, std::chrono::nanoseconds(50ms).count(),
+            waiterForEvent(&screenshot_evt), waiterForUTimer(&activity_timer));
+
+        if (!this->replaceScreenshotWithGuideButton)
+            continue;
+
+        if (rc == KERNELRESULT(TimedOut))
+            continue;
+
+        switch (idx) {
+            case 0: // Screenshot button
+                if (!this->replaceScreenshotWithGuideButton)
+                    break;
+
+                eventClear(&screenshot_evt);
+
+                if (!down_start_tick) {
+                    down_start_tick = armGetSystemTick();
+                    isScreenshotPressed = true;
+                    Logger::info("Screenshot button clicked");
+                } else {
+                    down_start_tick    = 0;
+                    isScreenshotPressed = false;
+                    Logger::info("Screenshot button released");
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
 
