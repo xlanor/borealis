@@ -29,6 +29,12 @@
 namespace brls
 {
 
+enum class ButtonOverrideMode {
+    NONE,
+    CUSTOM_EVENT,
+    GUIDE_BUTTON
+};
+
 // InputManager that uses the hid sysmodule to get inputs
 class SwitchInputManager : public InputManager
 {
@@ -60,16 +66,33 @@ class SwitchInputManager : public InputManager
 
     void clearVibration(int controller);
 
-    bool isReplaceScreenshotWithGuideButton() { return replaceScreenshotWithGuideButton; }
-    void setReplaceScreenshotWithGuideButton(bool value) { replaceScreenshotWithGuideButton = value; }
+    /*
+    * It will not report about screenshot button state, if screenshotButtonOverrideMode equals NONE
+    */
+    bool isScreenshotButtonPressed() { return m_isScreenshotPressed; }
+
+    /*
+    * It will not report about home button state, if homeButtonOverrideMode equals NONE
+    */
+    bool isHomeButtonPressed() { return m_isHomePressed; }
+
+    ButtonOverrideMode screenshotButtonOverrideMode() { return m_screenshotButtonMode; }
+    void setScreenshotButtonOverrideMode(ButtonOverrideMode value) { m_screenshotButtonMode = value; }
+
+    ButtonOverrideMode homeButtonOverrideMode() { return m_homeButtonMode; }
+    void setHomeButtonOverrideMode(ButtonOverrideMode value) { m_homeButtonMode = value; }
 
   private:
     void screenshot_button_thread_fn(std::stop_token token);
-    bool replaceScreenshotWithGuideButton = false;
     std::jthread screenshot_button_thread;
 
+    ButtonOverrideMode m_screenshotButtonMode = ButtonOverrideMode::NONE;
+    ButtonOverrideMode m_homeButtonMode = ButtonOverrideMode::NONE;
+
   private:
-    bool isScreenshotPressed = false;
+    bool m_isScreenshotPressed = false;
+    bool m_isHomePressed = false;
+
     bool cursorInited = false;
     int cursorWidth, cursorHeight;
     int cursorTexture = 0;

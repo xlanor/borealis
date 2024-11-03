@@ -18,6 +18,7 @@
 #include <borealis/core/thread.hpp>
 #include <borealis/core/application.hpp>
 #include <borealis/platforms/switch/switch_input.hpp>
+#include <borealis/core/application.hpp>
 
 // Avoid namespace collision
 #define NXEvent ::Event
@@ -258,8 +259,13 @@ void SwitchInputManager::updateControllerStateInner(ControllerState* state, PadS
         state->buttons[i]  = keysDown & switchKey;
     }
 
-    if (replaceScreenshotWithGuideButton)
-        state->buttons[BUTTON_GUIDE] = isScreenshotPressed;
+    state->buttons[BUTTON_GUIDE] = false;
+
+    if (m_screenshotButtonMode == ButtonOverrideMode::GUIDE_BUTTON)
+        state->buttons[BUTTON_GUIDE] |= m_isScreenshotPressed;
+
+    if (m_homeButtonMode == ButtonOverrideMode::GUIDE_BUTTON)
+        state->buttons[BUTTON_GUIDE] |= m_isHomePressed;
 
     HidAnalogStickState analog_stick_l = padGetStickPos(pad, 0);
     HidAnalogStickState analog_stick_r = padGetStickPos(pad, 1);
@@ -681,48 +687,58 @@ void SwitchInputManager::screenshot_button_thread_fn(std::stop_token token) {
         return;
     }
 
-    NXEvent activity_evt;
-    DEFER([&activity_evt] { eventClose(&activity_evt); });
-    if (auto rc = inssGetWritableEvent(0, &activity_evt); R_FAILED(rc)) {
-        Logger::error("Failed to acquire the activity event: {}\n", rc);
+    NXEvent home_evt;
+    DEFER([&home_evt] { eventClose(&home_evt); });
+    if (auto rc = hidsysAcquireHomeButtonEventHandle(&home_evt, false); R_FAILED(rc)) {
+        Logger::error("Failed to acquire the home button event: {}\n", rc);
         return;
     }
 
-    UTimer activity_timer;
-    DEFER([&activity_timer] { utimerStop(&activity_timer); });
-
-    utimerCreate(&activity_timer, std::chrono::nanoseconds(500ms).count(), TimerType_Repeating);
-    utimerStart(&activity_timer);
-
     eventClear(&screenshot_evt);
+    eventClear(&home_evt);
 
-    u64 down_start_tick = 0;
+    u64 screenshot_down_start_tick = 0;
+    u64 home_down_start_tick = 0;
+
     while (!token.stop_requested()) {
         s32 idx;
         auto rc = waitMulti(&idx, std::chrono::nanoseconds(50ms).count(),
-            waiterForEvent(&screenshot_evt), waiterForUTimer(&activity_timer));
-
-        if (!this->replaceScreenshotWithGuideButton)
-            continue;
+            waiterForEvent(&screenshot_evt), waiterForEvent(&home_evt));
 
         if (rc == KERNELRESULT(TimedOut))
             continue;
 
         switch (idx) {
             case 0: // Screenshot button
-                if (!this->replaceScreenshotWithGuideButton)
+                if (this->m_screenshotButtonMode == ButtonOverrideMode::NONE)
                     break;
 
                 eventClear(&screenshot_evt);
 
-                if (!down_start_tick) {
-                    down_start_tick = armGetSystemTick();
-                    isScreenshotPressed = true;
+                if (!screenshot_down_start_tick) {
+                    screenshot_down_start_tick = armGetSystemTick();
+                    m_isScreenshotPressed = true;
                     Logger::info("Screenshot button clicked");
                 } else {
-                    down_start_tick    = 0;
-                    isScreenshotPressed = false;
+                    screenshot_down_start_tick    = 0;
+                    m_isScreenshotPressed = false;
                     Logger::info("Screenshot button released");
+                }
+                break;
+            case 1: // Home button
+                if (this->m_homeButtonMode == ButtonOverrideMode::NONE)
+                    break;
+            
+                eventClear(&home_evt);
+
+                if (!home_down_start_tick) {
+                    home_down_start_tick = armGetSystemTick();
+                    m_isHomePressed = true;
+                    Logger::info("Home button clicked");
+                } else {
+                    home_down_start_tick    = 0;
+                    m_isHomePressed = false;
+                    Logger::info("Home button released");
                 }
                 break;
             default:
