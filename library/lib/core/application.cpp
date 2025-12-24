@@ -806,6 +806,10 @@ void Application::frame()
     nvgResetTransform(Application::getNVGContext()); // scale
     nvgEndFrame(Application::getNVGContext());
 
+    // Invoke post-render callback (for video overlay rendering)
+    if (Application::postRenderCallback)
+        Application::postRenderCallback();
+
     Application::platform->getVideoContext()->endFrame();
 }
 
@@ -868,6 +872,11 @@ void Application::setLimitedFPS(size_t fps)
 void Application::setSwapInterval(int interval)
 {
     Application::platform->getVideoContext()->setSwapInterval(interval);
+}
+
+void Application::setPostRenderCallback(PostRenderCallback callback)
+{
+    Application::postRenderCallback = callback;
 }
 
 void Application::notify(const std::string& text)

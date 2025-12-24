@@ -49,6 +49,9 @@ enum class InputType
     TOUCH, // Touch screen
 };
 
+// Callback type for post-render operations (after NanoVG flush, before present)
+using PostRenderCallback = std::function<void()>;
+
 class DebugLayer;
 class EditTextDialog;
 
@@ -358,6 +361,12 @@ class Application
 
     static void removeWatchedKeys(const BrlsKeyCombination key);
 
+    /**
+     * Sets a callback to be invoked after NanoVG flush but before present.
+     * Useful for video overlay rendering that needs to draw on top of UI.
+     */
+    static void setPostRenderCallback(PostRenderCallback callback);
+
   private:
     inline static bool inited               = false;
     inline static bool quitRequested        = false;
@@ -444,6 +453,9 @@ class Application
     static void registerBuiltInXMLViews();
 
     inline static DebugLayer* debugLayer = nullptr;
+
+    // Post-render callback for video overlay rendering
+    inline static PostRenderCallback postRenderCallback = nullptr;
 };
 
 } // namespace brls
