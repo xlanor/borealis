@@ -304,6 +304,8 @@ CDescriptorSet<4096U> *SwitchVideoContext::getImageDescriptor() { return rendere
 
 int SwitchVideoContext::allocateImageIndex() { return renderer->AllocateImageIndex(); }
 
+void SwitchVideoContext::freeImageIndex(int id) { renderer->FreeImageDescriptor(id); }
+
 void SwitchVideoContext::queueWaitFence(DkFence* fence)
 {
     dkQueueWaitFence(this->queue, fence);

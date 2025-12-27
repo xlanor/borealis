@@ -62,6 +62,8 @@ class SwitchVideoContext : public VideoContext
 
     int allocateImageIndex();
 
+    void freeImageIndex(int id);
+
     void queueWaitFence(DkFence* fence);
 
     void queueSignalFence(DkFence* fence, bool flash = false);

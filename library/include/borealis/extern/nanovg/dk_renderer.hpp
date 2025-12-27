@@ -180,7 +180,6 @@ namespace nvg {
             int m_last_image_descriptor = 0;
 
             int AcquireImageDescriptor(std::shared_ptr<Texture> texture, int image);
-            void FreeImageDescriptor(int image);
             void SetUniforms(const DKNVGcontext &ctx, int offset, int image);
 
             void UpdateVertexBuffer(const void *data, size_t size);
@@ -208,6 +207,7 @@ namespace nvg {
 
             CDescriptorSet<4096U> *GetImageDescriptor() { return &m_image_descriptor_set; }
             int AllocateImageIndex();
+            void FreeImageDescriptor(int image);
 
             void Flush(DKNVGcontext &ctx);
     };
