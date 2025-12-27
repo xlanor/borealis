@@ -17,6 +17,12 @@ public:
         m_codemem.destroy();
     }
 
+    void destroy()
+    {
+        m_codemem.destroy();
+        m_shader = {};
+    }
+
     constexpr operator bool() const
     {
         return m_codemem;
