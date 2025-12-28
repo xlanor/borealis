@@ -217,6 +217,10 @@ void Box::removeView(View* view, bool free)
     if (!found)
         return;
 
+    // Clear lastFocusedView if we're removing it
+    if (this->lastFocusedView == view)
+        this->lastFocusedView = nullptr;
+
     // Remove it
     if (!view->isDetached())
         YGNodeRemoveChild(this->ygNode, view->getYGNode());
