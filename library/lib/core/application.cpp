@@ -907,6 +907,25 @@ void Application::giveFocus(View* view)
     }
 }
 
+void Application::onViewRemoval(View* toRemove, View* focusFallback)
+{
+    // Check if currentFocus is inside the view being removed
+    View* focus = Application::currentFocus;
+    while (focus)
+    {
+        if (focus == toRemove)
+        {
+            // Clear focus before removal to prevent dangling pointer
+            Application::currentFocus = nullptr;
+            // Give focus to fallback after removal
+            if (focusFallback)
+                Application::giveFocus(focusFallback);
+            return;
+        }
+        focus = focus->getParent();
+    }
+}
+
 bool Application::popActivity(TransitionAnimation animation, std::function<void(void)> cb, bool free)
 {
     if (Application::activitiesStack.size() <= 1) // never pop the first activity

@@ -144,6 +144,13 @@ class Application
      */
     static void giveFocus(View* view);
 
+    /**
+     * Called when a view is about to be removed.
+     * Clears focus if currentFocus is inside the removed view,
+     * then gives focus to the fallback view after removal.
+     */
+    static void onViewRemoval(View* toRemove, View* focusFallback);
+
     inline static Style getStyle()
     {
         return brls::getStyle();

@@ -221,6 +221,9 @@ void Box::removeView(View* view, bool free)
     if (this->lastFocusedView == view)
         this->lastFocusedView = nullptr;
 
+    // Handle focus - clear if inside removed view, redirect to this box
+    Application::onViewRemoval(view, this);
+
     // Remove it
     if (!view->isDetached())
         YGNodeRemoveChild(this->ygNode, view->getYGNode());
