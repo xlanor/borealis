@@ -59,6 +59,12 @@ void userAppInit()
 void userAppExit()
 {
     printf("userAppExit\n");
+    fflush(stdout);
+
+    // Log applet state at exit time
+    AppletFocusState focusState = appletGetFocusState();
+    printf("userAppExit: focusState=%d\n", (int)focusState);
+    fflush(stdout);
 
     // backlight
     lblExit();

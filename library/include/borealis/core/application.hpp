@@ -205,6 +205,11 @@ class Application
      */
     static void unblockInputs();
 
+    /**
+     * Force unblock all inputs, resetting the token counter to 0
+     */
+    static void forceUnblockInputs() { blockInputsTokens = 0; }
+
     static bool isInputBlocks();
 
     static const ControllerState& getControllerState();

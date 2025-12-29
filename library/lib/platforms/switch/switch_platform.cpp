@@ -29,13 +29,34 @@ namespace brls
 {
 
 static AppletHookCookie applet_hook_cookie;
+
+static const char* appletHookTypeToString(AppletHookType hook)
+{
+    switch (hook)
+    {
+        case AppletHookType_OnFocusState: return "OnFocusState";
+        case AppletHookType_OnOperationMode: return "OnOperationMode";
+        case AppletHookType_OnPerformanceMode: return "OnPerformanceMode";
+        case AppletHookType_OnExitRequest: return "OnExitRequest";
+        case AppletHookType_OnResume: return "OnResume";
+        case AppletHookType_OnCaptureButtonShortPressed: return "OnCaptureButtonShortPressed";
+        case AppletHookType_OnAlbumScreenShotTaken: return "OnAlbumScreenShotTaken";
+        case AppletHookType_RequestToDisplay: return "RequestToDisplay";
+        default: return "Unknown";
+    }
+}
+
 static void on_applet_hook(AppletHookType hook, void* arg)
 {
     SwitchPlatform* platform = (SwitchPlatform*)arg;
+
+    // Log ALL hooks received
+    brls::Logger::info("AppletHook received: {} ({})", static_cast<int>(hook), appletHookTypeToString(hook));
+
     switch (hook)
     {
         case AppletHookType_OnExitRequest:
-            brls::Logger::info("AppletHookType_OnExitRequest");
+            brls::Logger::info("AppletHookType_OnExitRequest - calling Application::quit()");
             brls::Application::quit();
             break;
         case AppletHookType_OnFocusState:
@@ -53,6 +74,9 @@ static void on_applet_hook(AppletHookType hook, void* arg)
                 default:
                     break;
             }
+            break;
+        case AppletHookType_OnResume:
+            brls::Logger::info("AppletHookType_OnResume - app resuming from sleep");
             break;
 #ifdef BOREALIS_USE_DEKO3D
         case AppletHookType_OnOperationMode:
@@ -250,9 +274,55 @@ std::string SwitchPlatform::getName()
     return "Switch";
 }
 
+static const char* focusStateToString(AppletFocusState state)
+{
+    switch (state)
+    {
+        case AppletFocusState_InFocus: return "InFocus";
+        case AppletFocusState_OutOfFocus: return "OutOfFocus";
+        case AppletFocusState_Background: return "Background";
+        default: return "Unknown";
+    }
+}
+
+static const char* operationModeToString(AppletOperationMode mode)
+{
+    switch (mode)
+    {
+        case AppletOperationMode_Handheld: return "Handheld";
+        case AppletOperationMode_Console: return "Console/Docked";
+        default: return "Unknown";
+    }
+}
+
 bool SwitchPlatform::mainLoopIteration()
 {
-    return appletMainLoop();
+    static int loopCount = 0;
+    loopCount++;
+
+    // Log applet state on first few iterations
+    if (loopCount <= 3)
+    {
+        AppletFocusState focusState = appletGetFocusState();
+        AppletOperationMode opMode = appletGetOperationMode();
+
+        brls::Logger::info("mainLoopIteration #{}: focusState={} ({}), opMode={} ({})",
+            loopCount,
+            static_cast<int>(focusState), focusStateToString(focusState),
+            static_cast<int>(opMode), operationModeToString(opMode));
+    }
+
+    bool result = appletMainLoop();
+
+    if (!result)
+    {
+        AppletFocusState focusState = appletGetFocusState();
+        brls::Logger::info("appletMainLoop returned FALSE on iteration #{}, focusState={} ({})",
+            loopCount,
+            static_cast<int>(focusState), focusStateToString(focusState));
+    }
+
+    return result;
 }
 
 VideoContext* SwitchPlatform::getVideoContext()
