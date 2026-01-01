@@ -79,4 +79,11 @@ void ThreadPool::threadEntry(int i) {
 
 }
 
+void ThreadPool::shutdown() {
+    if (_global) {
+        delete _global;
+        _global = nullptr;
+    }
+}
+
 } // namespace brls

@@ -32,6 +32,8 @@ public:
     void async(std::function<void(void)> func);
 
     static ThreadPool* global() { return _global; }
+    static void shutdown();
+
 private:
 
     void threadEntry(int i);
