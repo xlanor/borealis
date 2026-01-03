@@ -143,15 +143,24 @@ void Button::applyStyle()
 void Button::onFocusGained()
 {
     Box::onFocusGained();
-
     this->setShadowVisibility(false);
+
+    if (!this->style->hideHighlightBackground)
+    {
+        this->originalLabelColor = this->label->getTextColor();
+        this->label->setTextColor(nvgRGB(0, 0, 0));
+    }
 }
 
 void Button::onFocusLost()
 {
     Box::onFocusLost();
-
     this->setShadowVisibility(true);
+
+    if (!this->style->hideHighlightBackground)
+    {
+        this->label->setTextColor(this->originalLabelColor);
+    }
 }
 
 void Button::setStyle(const ButtonStyle* style)

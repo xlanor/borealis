@@ -41,6 +41,9 @@ class RadioCell : public RecyclerCell
     void setSelected(bool selected);
     bool getSelected();
 
+    void onFocusGained() override;
+    void onFocusLost() override;
+
     BRLS_BIND(Label, title, "brls/rediocell/title");
     BRLS_BIND(CheckBox, checkbox, "brls/rediocell/checkbox");
 
@@ -48,6 +51,7 @@ class RadioCell : public RecyclerCell
 
   private:
     bool selected = false;
+    NVGcolor originalTitleColor;
 };
 
 } // namespace brls

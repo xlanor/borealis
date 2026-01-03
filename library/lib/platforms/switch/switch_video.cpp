@@ -54,9 +54,12 @@ SwitchVideoContext::SwitchVideoContext()
 
     // Init deko
     this->device = dk::DeviceMaker {}.create();
-    this->queue  = dk::QueueMaker(this->device)
-        // Give this queue a high priority to help render the ui smoothly even if libmpv is hogging the gpu
-        .setFlags(DkQueueFlags_Graphics | DkQueueFlags_DisableZcull | DkQueueFlags_HighPrio)
+    DkQueueFlags queueFlags = DkQueueFlags_Graphics;
+    if (VideoContext::highPriorityQueue) {
+        queueFlags |= DkQueueFlags_DisableZcull | DkQueueFlags_HighPrio;
+    }
+    this->queue = dk::QueueMaker { this->device }
+        .setFlags(queueFlags)
         .create();
 
     this->imagesPool.emplace(device, DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image, IMAGES_POOL_SIZE);

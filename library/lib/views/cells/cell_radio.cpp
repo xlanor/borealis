@@ -99,6 +99,8 @@ View* CheckBox::create()
 RadioCell::RadioCell()
 {
     this->inflateFromXMLString(radioCellXML);
+    this->setHideHighlightBackground(true);
+    this->originalTitleColor = Application::getTheme()["brls/text"];
 
     this->registerStringXMLAttribute("title", [this](std::string value){
         this->title->setText(value);
@@ -111,12 +113,28 @@ void RadioCell::setSelected(bool selected)
 
     this->selected = selected;
     this->checkbox->setVisibility(selected ? Visibility::VISIBLE : Visibility::GONE);
-    this->title->setTextColor(selected ? theme["brls/list/listItem_value_color"] : theme["brls/text"]);
+    NVGcolor color = selected ? theme["brls/list/listItem_value_color"] : theme["brls/text"];
+    this->title->setTextColor(color);
+    this->originalTitleColor = color;
 }
 
 bool RadioCell::getSelected()
 {
     return this->selected;
+}
+
+void RadioCell::onFocusGained()
+{
+    RecyclerCell::onFocusGained();
+    this->setBackgroundColor(nvgRGBA(229, 160, 13, 255));
+    this->title->setTextColor(nvgRGB(0, 0, 0));
+}
+
+void RadioCell::onFocusLost()
+{
+    RecyclerCell::onFocusLost();
+    this->setBackgroundColor(nvgRGBA(0, 0, 0, 0));
+    this->title->setTextColor(this->originalTitleColor);
 }
 
 View* RadioCell::create()

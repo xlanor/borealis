@@ -53,6 +53,11 @@ const std::string detailCellXML = R"xml(
 DetailCell::DetailCell()
 {
     this->inflateFromXMLString(detailCellXML);
+    this->setHideHighlightBackground(true);
+
+    Theme theme = Application::getTheme();
+    this->originalTitleColor = theme["brls/text"];
+    this->originalDetailColor = theme["brls/list/listItem_value_color"];
 
     this->registerStringXMLAttribute("title", [this](std::string value)
         { this->title->setText(value); });
@@ -81,6 +86,24 @@ void DetailCell::setDetailTextColor(NVGcolor color)
 View* DetailCell::create()
 {
     return new DetailCell();
+}
+
+void DetailCell::onFocusGained()
+{
+    RecyclerCell::onFocusGained();
+    this->originalTitleColor = this->title->getTextColor();
+    this->originalDetailColor = this->detail->getTextColor();
+    this->setBackgroundColor(nvgRGBA(229, 160, 13, 255));
+    this->title->setTextColor(nvgRGB(0, 0, 0));
+    this->detail->setTextColor(nvgRGBA(60, 60, 60, 255));
+}
+
+void DetailCell::onFocusLost()
+{
+    RecyclerCell::onFocusLost();
+    this->setBackgroundColor(nvgRGBA(0, 0, 0, 0));
+    this->title->setTextColor(this->originalTitleColor);
+    this->detail->setTextColor(this->originalDetailColor);
 }
 
 } // namespace brls

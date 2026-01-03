@@ -34,10 +34,17 @@ class DetailCell : public RecyclerCell
     void setDetailText(std::string title);
     void setDetailTextColor(NVGcolor color);
 
+    void onFocusGained() override;
+    void onFocusLost() override;
+
     BRLS_BIND(Label, title, "brls/rediocell/title");
     BRLS_BIND(Label, detail, "brls/rediocell/detail");
 
     static View* create();
+
+  protected:
+    NVGcolor originalTitleColor;
+    NVGcolor originalDetailColor;
 };
 
 } // namespace brls

@@ -101,7 +101,8 @@ HScrollingFrame::HScrollingFrame()
 void HScrollingFrame::setupScrollingIndicator()
 {
     Theme theme        = Application::getTheme();
-    scrollingIndicator = new Rectangle(theme["brls/text"]);
+    NVGcolor scrollColor = theme.getColor("brls/scrollbar").a > 0 ? theme["brls/scrollbar"] : theme["brls/text"];
+    scrollingIndicator = new Rectangle(scrollColor);
     scrollingIndicator->setSize(Size(0, SCROLLING_INDICATOR_HEIGHT));
     scrollingIndicator->setCornerRadius(SCROLLING_INDICATOR_HEIGHT / 2);
     scrollingIndicator->detach();

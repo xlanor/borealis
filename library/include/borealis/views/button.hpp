@@ -188,6 +188,7 @@ class Button : public Box
     ButtonState state        = ButtonState::ENABLED;
 
     NVGcolor textColor;
+    NVGcolor originalLabelColor;
     bool textColorOverritten = false;
 
     void applyStyle();

@@ -110,12 +110,14 @@ void SidebarItem::setActive(bool active)
         this->activeEvent.fire(this);
 
         this->accent->setVisibility(Visibility::VISIBLE);
-        this->label->setTextColor(theme["brls/sidebar/active_item"]);
+        if (!this->isFocused())
+            this->label->setTextColor(theme["brls/sidebar/active_item"]);
     }
     else
     {
         this->accent->setVisibility(Visibility::INVISIBLE);
-        this->label->setTextColor(theme["brls/text"]);
+        if (!this->isFocused())
+            this->label->setTextColor(theme["brls/text"]);
     }
 
     this->active = active;
@@ -124,6 +126,7 @@ void SidebarItem::setActive(bool active)
 void SidebarItem::onFocusGained()
 {
     Box::onFocusGained();
+    this->label->setTextColor(nvgRGB(0, 0, 0));
 
     if (this->group)
         this->group->setActive(this);
@@ -132,6 +135,8 @@ void SidebarItem::onFocusGained()
 void SidebarItem::onFocusLost()
 {
     Box::onFocusLost();
+    Theme theme = Application::getTheme();
+    this->label->setTextColor(this->active ? theme["brls/sidebar/active_item"] : theme["brls/text"]);
 }
 
 void SidebarItem::setGroup(SidebarItemGroup* group)

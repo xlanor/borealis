@@ -397,6 +397,8 @@ void Image::clear()
 
     if (this->freeTexture)
         nvgDeleteImage(Application::getNVGContext(), this->texture);
+    else
+        TextureCache::instance().removeCache(this->texture);
 
     this->texture = 0;
 }
