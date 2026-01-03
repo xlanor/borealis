@@ -31,7 +31,7 @@ typedef Event _LibNXEvent; // "Event" alone clashes with brls::Event
 namespace brls
 {
 
-static constexpr const unsigned FRAMEBUFFERS_COUNT = 3;
+static constexpr const unsigned MAX_FRAMEBUFFERS = 4;
 
 // deko3d video context
 class SwitchVideoContext : public VideoContext
@@ -91,10 +91,10 @@ class SwitchVideoContext : public VideoContext
     dk::Image depthBuffer;
     CMemPool::Handle depthBufferHandle;
 
-    dk::Image framebuffers[FRAMEBUFFERS_COUNT];
-    CMemPool::Handle framebuffersHandles[FRAMEBUFFERS_COUNT];
+    dk::Image framebuffers[MAX_FRAMEBUFFERS];
+    CMemPool::Handle framebuffersHandles[MAX_FRAMEBUFFERS];
 
-    DkCmdList framebuffersCmdLists[FRAMEBUFFERS_COUNT];
+    DkCmdList framebuffersCmdLists[MAX_FRAMEBUFFERS];
     DkCmdList renderCmdlist;
 
     std::optional<CMemPool> imagesPool;

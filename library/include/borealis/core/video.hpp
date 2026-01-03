@@ -79,4 +79,6 @@ class VideoContext
     static inline int swapInterval = 1;
 
     static inline bool highPriorityQueue = true;
+
+    static inline unsigned framebufferCount = 3;
 };

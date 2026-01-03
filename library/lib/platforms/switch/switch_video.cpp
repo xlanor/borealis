@@ -54,7 +54,7 @@ SwitchVideoContext::SwitchVideoContext()
 
     // Init deko
     this->device = dk::DeviceMaker {}.create();
-    DkQueueFlags queueFlags = DkQueueFlags_Graphics;
+    uint32_t queueFlags = DkQueueFlags_Graphics;
     if (VideoContext::highPriorityQueue) {
         queueFlags |= DkQueueFlags_DisableZcull | DkQueueFlags_HighPrio;
     }
@@ -105,11 +105,11 @@ void SwitchVideoContext::createFramebufferResources()
         .initialize(framebufferLayout);
 
     // Create the framebuffers
-    std::array<DkImage const*, FRAMEBUFFERS_COUNT> fbArray;
+    std::array<DkImage const*, MAX_FRAMEBUFFERS> fbArray;
     uint64_t fbSize  = framebufferLayout.getSize();
     uint32_t fbAlign = framebufferLayout.getAlignment();
 
-    for (unsigned i = 0; i < FRAMEBUFFERS_COUNT; i++)
+    for (unsigned i = 0; i < VideoContext::framebufferCount; i++)
     {
         // Allocate a framebuffer
         framebuffersHandles[i] = this->imagesPool->allocate(fbSize, fbAlign);
@@ -124,8 +124,8 @@ void SwitchVideoContext::createFramebufferResources()
         fbArray[i] = &this->framebuffers[i];
     }
 
-    // Create the swapchain using the framebuffers
-    this->swapchain = dk::SwapchainMaker { this->device, nwindowGetDefault(), fbArray }.create();
+    // Create the swapchain using the framebuffers (only use configured count)
+    this->swapchain = dk::SwapchainMaker { this->device, nwindowGetDefault(), fbArray.data(), VideoContext::framebufferCount }.create();
 
     // Generate the main rendering cmdlist
     this->recordStaticCommands();
@@ -258,7 +258,7 @@ void SwitchVideoContext::destroyFramebufferResources()
     this->swapchain.destroy();
 
     // Destroy the framebuffers
-    for (unsigned i = 0; i < FRAMEBUFFERS_COUNT; i++)
+    for (unsigned i = 0; i < VideoContext::framebufferCount; i++)
         framebuffersHandles[i].destroy();
 
     // Destroy the depth buffer
