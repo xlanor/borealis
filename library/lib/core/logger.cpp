@@ -38,6 +38,11 @@ void Logger::setLogOutput(std::FILE *newLogOut)
     Logger::logOut = newLogOut;
 }
 
+std::FILE* Logger::getLogOutput()
+{
+    return Logger::logOut;
+}
+
 void Logger::setThreadSafeLogging(bool newThreadSafeLogging) {
     Logger::threadSafeLogging = newThreadSafeLogging;
 }

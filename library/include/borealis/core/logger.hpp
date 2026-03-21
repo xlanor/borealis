@@ -79,6 +79,7 @@ class Logger
     static LogLevel getLogLevel();
 
     static void setLogOutput(std::FILE *logOut);
+    static std::FILE* getLogOutput();
 
     /**
      * If sets to true, each log operation will lock a mutex, making the Logger thread-safe.
