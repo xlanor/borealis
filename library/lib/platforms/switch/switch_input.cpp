@@ -323,17 +323,17 @@ void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_d
     hidSendVibrationValues(vibration_device, vibration_values, 2);
 }
 
-void SwitchInputManager::sendRumbleRaw(float lowFreq, float highFreq, float lowAmp, float highAmp)
+void SwitchInputManager::sendRumbleRaw(unsigned short controller, float lowFreq, float highFreq, float lowAmp, float highAmp)
 {
     padUpdate(&this->padStateHandheld);
-    if (padStateHandheld.active_handheld)
+    if (controller == 0 && padStateHandheld.active_handheld)
     {
         sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, lowFreq, highFreq, lowAmp, highAmp);
+        return;
     }
-    else
-    {
-        sendRumbleInternal(m_vibration_device_handles[0], m_vibration_values[0], lowFreq, highFreq, lowAmp, highAmp);
-    }
+
+    int localController = padStateHandheld.active_handheld ? controller - 1 : controller;
+    sendRumbleInternal(m_vibration_device_handles[localController], m_vibration_values[localController], lowFreq, highFreq, lowAmp, highAmp);
 }
 
 void SwitchInputManager::sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor)

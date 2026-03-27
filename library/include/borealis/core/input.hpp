@@ -336,6 +336,13 @@ class InputManager
     virtual void sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor) = 0;
 
     /**
+     * Sends raw rumble with explicit frequency and amplitude control.
+     * Frequencies in Hz, amplitudes in 0.0-1.0 range.
+     * Default implementation is a no-op for platforms that don't support it.
+     */
+    virtual void sendRumbleRaw(unsigned short controller, float lowFreq, float highFreq, float lowAmp, float highAmp) {};
+
+    /**
      * Called once every runloop cycle to perform some cleanup before new one.
      * For internal call only
      */
