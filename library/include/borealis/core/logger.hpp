@@ -36,6 +36,7 @@
 #include <borealis/core/event.hpp>
 #include <mutex>
 #include <string>
+#include <queue>
 
 namespace brls
 {
@@ -112,28 +113,39 @@ class Logger
         try
         {
 #ifdef IOS
-            fmt::print(logOut, "{:%H:%M:%S}.{:03d} {} {}\n", time_tm, (int)ms, color, log);
+            std::string formatted = fmt::format("{:%H:%M:%S}.{:03d} {} {}\n", time_tm, (int)ms, color, log);
 #elif defined(ANDROID)
             __android_log_print(6 - (int)level, "borealis", "%02d:%02d:%02d.%03d %s\n", time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec, (int)ms, log.c_str());
+            std::string formatted;
 #elif defined(__PSV__)
             sceClibPrintf("%02d:%02d:%02d.%03d\033%s[%s]\033[0m %s\n", time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec, (int)ms, color.c_str(), prefix.c_str(), log.c_str());
+            std::string formatted;
 #elif defined(PS4)
             sceKernelDebugOutText(0, fmt::format("{:02d}:{:02d}:{:02d}.{:03d}\033{}[{}]\033[0m {}\n", lt.hour, lt.minute, lt.second, (int)ms, color, prefix, log).c_str());
+            std::string formatted;
 #else
-            fmt::print(logOut, "{:%H:%M:%S}.{:03d}\033{}[{}]\033[0m {}\n", time_tm, (int)ms, color, prefix, log);
+            std::string formatted = fmt::format("{:%H:%M:%S}.{:03d}\033{}[{}]\033[0m {}\n", time_tm, (int)ms, color, prefix, log);
 #endif
+
+            if (!formatted.empty())
+            {
+                if (asyncLogging)
+                {
+                    std::lock_guard<std::mutex> qLock(logQueueMtx);
+                    logQueue.push(std::move(formatted));
+                }
+                else
+                {
+                    fwrite(formatted.c_str(), 1, formatted.size(), logOut);
+                }
+            }
 
             logEvent.fire(now, level, log);
         }
         catch (const std::exception& e)
         {
-            // will be printed after the first fmt::print (so after the log tag)
             printf("! Invalid log format string: \"%s\": %s\n", fmt::basic_string_view<char>(format).data(), e.what());
         }
-
-#ifdef __MINGW32__
-        fflush(logOut);
-#endif
     }
 
     template <typename... Args>
@@ -171,8 +183,28 @@ class Logger
         return &logEvent;
     }
 
+    static void setAsyncLogging(bool enabled) { asyncLogging = enabled; }
+
+    static void flushAsyncLogs()
+    {
+        std::queue<std::string> batch;
+        {
+            std::lock_guard<std::mutex> qLock(logQueueMtx);
+            batch.swap(logQueue);
+        }
+        while (!batch.empty())
+        {
+            fwrite(batch.front().c_str(), 1, batch.front().size(), logOut);
+            batch.pop();
+        }
+        fflush(logOut);
+    }
+
   private:
     inline static std::mutex logMtx;
+    inline static std::mutex logQueueMtx;
+    inline static std::queue<std::string> logQueue;
+    inline static bool asyncLogging = false;
     inline static bool threadSafeLogging = true;
     inline static Event<TimePoint, LogLevel, std::string> logEvent;
     inline static std::FILE *logOut = stdout;
