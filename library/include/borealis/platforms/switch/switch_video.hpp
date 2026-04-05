@@ -70,6 +70,8 @@ class SwitchVideoContext : public VideoContext
 
     void queueFlush();
 
+    CMemPool* getImagesPool() { return imagesPool ? &*imagesPool : nullptr; }
+
   private:
     _LibNXEvent defaultDisplayResolutionChangeEvent;
     bool displayResolutionChangeEventReady = true;
