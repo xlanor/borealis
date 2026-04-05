@@ -378,6 +378,8 @@ class Application
      * Useful for video overlay rendering that needs to draw on top of UI.
      */
     static void setPostRenderCallback(PostRenderCallback callback);
+    static void setExclusiveRender(bool exclusive);
+    static bool isExclusiveRender();
 
   private:
     inline static bool inited               = false;
@@ -468,6 +470,7 @@ class Application
 
     // Post-render callback for video overlay rendering
     inline static PostRenderCallback postRenderCallback = nullptr;
+    inline static bool exclusiveRender = false;
 };
 
 } // namespace brls

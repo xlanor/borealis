@@ -743,26 +743,29 @@ void Application::frame()
 {
     VideoContext* videoContext = Application::platform->getVideoContext();
 
-    // Frame context
-    FrameContext frameContext = FrameContext();
+    videoContext->beginFrame();
 
+    if (Application::exclusiveRender && Application::postRenderCallback)
+    {
+        Application::postRenderCallback();
+        videoContext->endFrame();
+        return;
+    }
+
+    videoContext->clear(Application::getTheme().getColor("brls/clear"));
+    float scaleFactor = videoContext->getScaleFactor();
+
+    FrameContext frameContext = FrameContext();
     frameContext.pixelRatio = (float)Application::windowWidth / (float)Application::windowHeight;
     frameContext.vg         = Application::getNVGContext();
     frameContext.fontStash  = &Application::fontStash;
     frameContext.theme      = Application::getTheme();
-
-    // Begin frame and clear
-    videoContext->beginFrame();
-    videoContext->clear(Application::getTheme().getColor("brls/clear"));
-    float scaleFactor = videoContext->getScaleFactor();
 
     nvgBeginFrame(frameContext.vg, Application::windowWidth, Application::windowHeight, scaleFactor);
     nvgScale(frameContext.vg, Application::windowScale, Application::windowScale);
 
     std::vector<View*> viewsToDraw;
 
-    // Draw all activities in the stack
-    // until we find one that's not translucent
     for (size_t i = 0; i < Application::activitiesStack.size(); i++)
     {
         Activity* activity = Application::activitiesStack[Application::activitiesStack.size() - 1 - i];
@@ -786,7 +789,6 @@ void Application::frame()
         currentFocus->frameHighlight(&frameContext);
     }
 
-    // Notifications
     Application::notificationManager->frame(&frameContext);
 
     if (isDrawCursor())
@@ -802,15 +804,13 @@ void Application::frame()
         debugLayer->frame(&frameContext);
     }
 
-    // End frame
-    nvgResetTransform(Application::getNVGContext()); // scale
+    nvgResetTransform(Application::getNVGContext());
     nvgEndFrame(Application::getNVGContext());
 
-    // Invoke post-render callback (for video overlay rendering)
     if (Application::postRenderCallback)
         Application::postRenderCallback();
 
-    Application::platform->getVideoContext()->endFrame();
+    videoContext->endFrame();
 }
 
 void Application::exit()
@@ -877,6 +877,16 @@ void Application::setSwapInterval(int interval)
 void Application::setPostRenderCallback(PostRenderCallback callback)
 {
     Application::postRenderCallback = callback;
+}
+
+void Application::setExclusiveRender(bool exclusive)
+{
+    Application::exclusiveRender = exclusive;
+}
+
+bool Application::isExclusiveRender()
+{
+    return Application::exclusiveRender;
 }
 
 void Application::notify(const std::string& text)
