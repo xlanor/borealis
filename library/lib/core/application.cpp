@@ -28,6 +28,7 @@
 #include <borealis/core/font.hpp>
 #include <borealis/core/i18n.hpp>
 #include <borealis/core/thread.hpp>
+#include <borealis/core/thread_pool.hpp>
 #include <borealis/core/time.hpp>
 #include <borealis/core/util.hpp>
 #include <borealis/views/bottom_bar.hpp>
@@ -827,6 +828,7 @@ void Application::exit()
 
     Application::deletionPool.clear();
 
+    ThreadPool::shutdownGlobal();
     Threading::stop();
 
     exitDoneEvent.fire();

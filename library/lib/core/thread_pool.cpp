@@ -48,8 +48,20 @@ void ThreadPool::async(std::function<void(void)> func) {
     // Place a job on the queue and unblock a thread
     std::unique_lock<std::mutex> l(lock_);
 
+    if (shutdown_)
+        return;
+
     jobs_.emplace(std::move(func));
     condVar_.notify_one();
+}
+
+void ThreadPool::shutdownGlobal() {
+    ThreadPool* global = _global;
+    if (!global)
+        return;
+
+    _global = nullptr;
+    delete global;
 }
 
 void ThreadPool::threadEntry(int i) {
@@ -77,13 +89,6 @@ void ThreadPool::threadEntry(int i) {
         job();
     }
 
-}
-
-void ThreadPool::shutdown() {
-    if (_global) {
-        delete _global;
-        _global = nullptr;
-    }
 }
 
 } // namespace brls

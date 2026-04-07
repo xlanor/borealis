@@ -132,10 +132,16 @@ SwitchInputManager::SwitchInputManager()
 
 SwitchInputManager::~SwitchInputManager()
 {
-    NVGcontext* vg = Application::getNVGContext();
+    this->screenshot_button_thread.request_stop();
+    if (this->screenshot_button_thread.joinable())
+        this->screenshot_button_thread.join();
 
     if (this->cursorTexture != 0)
+    {
+        NVGcontext* vg = Application::getNVGContext();
         nvgDeleteImage(vg, this->cursorTexture);
+        this->cursorTexture = 0;
+    }
 
     hidStopSixAxisSensor(this->m_six_axis_sensor_handle[0]);
     hidStopSixAxisSensor(this->m_six_axis_sensor_handle[1]);

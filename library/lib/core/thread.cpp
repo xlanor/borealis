@@ -53,7 +53,10 @@ void sync(const std::function<void()>& func)
 void async(const std::function<void()>& task, bool concurrent)
 {
     if (concurrent)
-        ThreadPool::global()->async(task);
+    {
+        if (ThreadPool* threadPool = ThreadPool::global())
+            threadPool->async(task);
+    }
     else
         Threading::async(task);
 }
