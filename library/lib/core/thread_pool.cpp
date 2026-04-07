@@ -16,11 +16,93 @@
 
 #include <borealis/core/thread_pool.hpp>
 #include <borealis/core/logger.hpp>
+#include <algorithm>
+
+#if defined(__SWITCH__)
+#include <switch.h>
+#endif
 
 namespace brls {
 
+#if defined(__SWITCH__)
+namespace {
+
+unsigned defaultThreadPoolSize() {
+    unsigned concurrency = std::thread::hardware_concurrency();
+    if (concurrency == 0) {
+        concurrency = 4;
+    }
+
+    // Keep a few workers available, but avoid oversubscribing a 4-core system.
+    return std::min<unsigned>(3, std::max<unsigned>(2, concurrency - 1));
+}
+
+int countAllowedCores(u64 affinityMask) {
+    int count = 0;
+    for (s32 core = 0; core < 4; core++) {
+        if (affinityMask & (1ULL << core)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+s32 selectAllowedCore(u64 affinityMask, int ordinal) {
+    s32 lastAllowedCore = -1;
+    for (s32 core = 0; core < 4; core++) {
+        if ((affinityMask & (1ULL << core)) == 0) {
+            continue;
+        }
+
+        lastAllowedCore = core;
+        if (ordinal == 0) {
+            return core;
+        }
+
+        ordinal--;
+    }
+
+    return lastAllowedCore;
+}
+
+void applySwitchThreadPoolHints(int workerIndex) {
+    s32 preferredCore = -1;
+    u64 affinityMask = 0;
+    if (R_FAILED(svcGetThreadCoreMask(&preferredCore, &affinityMask, CUR_THREAD_HANDLE))) {
+        return;
+    }
+
+    const int allowedCoreCount = countAllowedCores(affinityMask);
+    if (allowedCoreCount <= 0) {
+        return;
+    }
+
+    int targetOrdinal = workerIndex % allowedCoreCount;
+    if (allowedCoreCount > 2 && targetOrdinal == allowedCoreCount - 1) {
+        targetOrdinal = allowedCoreCount - 2;
+    }
+
+    s32 targetCore = selectAllowedCore(affinityMask, targetOrdinal);
+    if (targetCore >= 0 && targetCore != preferredCore) {
+        svcSetThreadCoreMask(CUR_THREAD_HANDLE, targetCore, static_cast<u32>(affinityMask));
+    }
+
+    svcSetThreadPriority(CUR_THREAD_HANDLE, 0x3A);
+}
+
+} // namespace
+#else
+namespace {
+
+unsigned defaultThreadPoolSize() {
+    return 8;
+}
+
+} // namespace
+#endif
+
 // Create global ThreadPool with default amount of threads (probably should be configurable)
-ThreadPool* ThreadPool::_global = new ThreadPool(8);
+ThreadPool* ThreadPool::_global = new ThreadPool(defaultThreadPoolSize());
 
 ThreadPool::ThreadPool(int threads) : shutdown_(false) {
     // Create the specified number of threads
@@ -66,6 +148,10 @@ void ThreadPool::shutdownGlobal() {
 
 void ThreadPool::threadEntry(int i) {
     std::function<void(void)> job;
+
+#if defined(__SWITCH__)
+    applySwitchThreadPoolHints(i);
+#endif
 
     while (true) {
         {

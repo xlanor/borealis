@@ -27,12 +27,71 @@
 #include <pthread.h>
 #endif
 
+#if defined(__SWITCH__)
+#include <switch.h>
+#endif
+
 #ifdef PS4
 #include <orbis/libkernel.h>
 #endif
 
 namespace brls
 {
+
+#if defined(__SWITCH__)
+namespace {
+
+int countAllowedCores(u64 affinityMask) {
+    int count = 0;
+    for (s32 core = 0; core < 4; core++) {
+        if (affinityMask & (1ULL << core)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+s32 selectAllowedCore(u64 affinityMask, int ordinal) {
+    s32 lastAllowedCore = -1;
+    for (s32 core = 0; core < 4; core++) {
+        if ((affinityMask & (1ULL << core)) == 0) {
+            continue;
+        }
+
+        lastAllowedCore = core;
+        if (ordinal == 0) {
+            return core;
+        }
+
+        ordinal--;
+    }
+
+    return lastAllowedCore;
+}
+
+void applySwitchTaskLoopHints() {
+    s32 preferredCore = -1;
+    u64 affinityMask = 0;
+    if (R_FAILED(svcGetThreadCoreMask(&preferredCore, &affinityMask, CUR_THREAD_HANDLE))) {
+        return;
+    }
+
+    const int allowedCoreCount = countAllowedCores(affinityMask);
+    if (allowedCoreCount <= 0) {
+        return;
+    }
+
+    const int targetOrdinal = allowedCoreCount > 2 ? 1 : 0;
+    s32 targetCore = selectAllowedCore(affinityMask, targetOrdinal);
+    if (targetCore >= 0 && targetCore != preferredCore) {
+        svcSetThreadCoreMask(CUR_THREAD_HANDLE, targetCore, static_cast<u32>(affinityMask));
+    }
+
+    svcSetThreadPriority(CUR_THREAD_HANDLE, 0x3B);
+}
+
+} // namespace
+#endif
 
 #ifdef BOREALIS_USE_STD_THREAD
 static std::thread *task_loop_thread = nullptr;
@@ -197,6 +256,10 @@ void Threading::std_task_loop() {
 }
 void* Threading::task_loop(void* a)
 {
+#if defined(__SWITCH__)
+    applySwitchTaskLoopHints();
+#endif
+
     while (task_loop_active)
     {
         std::vector<std::function<void()>> m_tasks_copy;
