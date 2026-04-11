@@ -60,3 +60,42 @@ _fail0:
     fclose(f);
     return false;
 }
+
+bool CShader::loadFromMemory(CMemPool& pool, const uint8_t* data, uint32_t size)
+{
+    DkshHeader hdr;
+    void* ctrlmem;
+
+    m_codemem.destroy();
+
+    if (size < sizeof(hdr))
+        return false;
+
+    memcpy(&hdr, data, sizeof(hdr));
+
+    if (size < hdr.control_sz + hdr.code_sz)
+        return false;
+
+    ctrlmem = malloc(hdr.control_sz);
+    if (!ctrlmem)
+        return false;
+
+    memcpy(ctrlmem, data, hdr.control_sz);
+
+    m_codemem = pool.allocate(hdr.code_sz, DK_SHADER_CODE_ALIGNMENT);
+    if (!m_codemem)
+    {
+        free(ctrlmem);
+        return false;
+    }
+
+    memcpy(m_codemem.getCpuAddr(), data + hdr.control_sz, hdr.code_sz);
+
+    dk::ShaderMaker{m_codemem.getMemBlock(), m_codemem.getOffset()}
+        .setControl(ctrlmem)
+        .setProgramId(0)
+        .initialize(m_shader);
+
+    free(ctrlmem);
+    return true;
+}
