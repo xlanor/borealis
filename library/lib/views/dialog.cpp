@@ -144,7 +144,7 @@ Dialog::Dialog(Box* contentView)
     appletFrame->registerAction(
         "hints/back"_i18n, BUTTON_B, [this](View* view) {
             if (cancelable)
-                this->dismiss();
+                this->close(this->closeCallback);
             return cancelable;
         },
         false, false, SOUND_BACK);
@@ -172,7 +172,7 @@ Dialog::Dialog(std::string text)
     appletFrame->registerAction(
         "hints/back"_i18n, BUTTON_B, [this](View* view) {
             if (cancelable)
-                this->dismiss();
+                this->close(this->closeCallback);
             return cancelable;
         },
         false, false, SOUND_BACK);
@@ -205,6 +205,11 @@ void Dialog::close(std::function<void(void)> cb)
 void Dialog::setCancelable(bool cancelable)
 {
     this->cancelable = cancelable;
+}
+
+void Dialog::setCloseCallback(std::function<void(void)> cb)
+{
+    this->closeCallback = cb;
 }
 
 void Dialog::rebuildButtons()
