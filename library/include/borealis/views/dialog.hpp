@@ -47,6 +47,7 @@ class Dialog : public Box
     unsigned frameX, frameY, frameWidth, frameHeight;
 
     std::vector<DialogButton*> buttons;
+    std::function<void(void)> closeCallback = [] {};
 
     void rebuildButtons();
     void buttonClick(DialogButton* button);
@@ -85,6 +86,7 @@ class Dialog : public Box
      * be cancelable
      */
     void setCancelable(bool cancelable);
+    void setCloseCallback(std::function<void(void)> cb);
 
     virtual void open();
     void close(std::function<void(void)> cb = [] {});
