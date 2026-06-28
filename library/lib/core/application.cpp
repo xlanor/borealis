@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <utility>
 #include <yoga/YGNode.h>
 #include <yoga/event/event.h>
 
@@ -199,7 +200,15 @@ bool Application::internalMainLoop()
     Ticking::updateTickings();
 
     // Render
-    Application::frame();
+    if (Application::renderSuspended.load())
+    {
+        if (Application::suspendedRenderCallback)
+            Application::suspendedRenderCallback();
+    }
+    else
+    {
+        Application::frame();
+    }
 
     // Run sync functions
     Threading::performSyncTasks();
@@ -889,6 +898,21 @@ void Application::setExclusiveRender(bool exclusive)
 bool Application::isExclusiveRender()
 {
     return Application::exclusiveRender;
+}
+
+void Application::setRenderSuspended(bool suspended)
+{
+    Application::renderSuspended.store(suspended);
+}
+
+bool Application::isRenderSuspended()
+{
+    return Application::renderSuspended.load();
+}
+
+void Application::setSuspendedRenderCallback(std::function<void()> callback)
+{
+    Application::suspendedRenderCallback = std::move(callback);
 }
 
 void Application::notify(const std::string& text)

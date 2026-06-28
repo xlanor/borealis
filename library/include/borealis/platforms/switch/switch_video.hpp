@@ -25,6 +25,7 @@ limitations under the License.
 #include <deko3d.hpp>
 #include <nanovg/dk_renderer.hpp>
 #include <optional>
+#include <mutex>
 
 typedef Event _LibNXEvent; // "Event" alone clashes with brls::Event
 
@@ -104,6 +105,7 @@ class SwitchVideoContext : public VideoContext
 
     std::optional<nvg::DkRenderer> renderer;
     NVGcontext* nvgContext;
+    std::mutex frameMutex;
 };
 
 } // namespace brls
