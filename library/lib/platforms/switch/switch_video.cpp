@@ -214,6 +214,8 @@ void SwitchVideoContext::resetFramebuffer()
 
 void SwitchVideoContext::beginFrame()
 {
+    this->frameMutex.lock();
+
     // Poll the display resolution change event
     if (this->displayResolutionChangeEventReady && R_SUCCEEDED(eventWait(&this->defaultDisplayResolutionChangeEvent, 0)))
         this->resetFramebuffer();
@@ -231,6 +233,7 @@ void SwitchVideoContext::endFrame()
 {
     // Now that we are done rendering, present it to the screen
     queue.presentImage(this->swapchain, this->imageSlot);
+    this->frameMutex.unlock();
 }
 
 void SwitchVideoContext::setSwapInterval(int interval)

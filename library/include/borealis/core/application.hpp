@@ -29,7 +29,9 @@
 #include <borealis/core/view.hpp>
 #include <borealis/core/notification_manager.hpp>
 #include <borealis/views/label.hpp>
+#include <atomic>
 #include <deque>
+#include <functional>
 #include <vector>
 
 #ifdef __WINRT__
@@ -380,6 +382,9 @@ class Application
     static void setPostRenderCallback(PostRenderCallback callback);
     static void setExclusiveRender(bool exclusive);
     static bool isExclusiveRender();
+    static void setRenderSuspended(bool suspended);
+    static bool isRenderSuspended();
+    static void setSuspendedRenderCallback(std::function<void()> callback);
 
   private:
     inline static bool inited               = false;
@@ -471,6 +476,8 @@ class Application
     // Post-render callback for video overlay rendering
     inline static PostRenderCallback postRenderCallback = nullptr;
     inline static bool exclusiveRender = false;
+    inline static std::atomic_bool renderSuspended = false;
+    inline static std::function<void()> suspendedRenderCallback = nullptr;
 };
 
 } // namespace brls
