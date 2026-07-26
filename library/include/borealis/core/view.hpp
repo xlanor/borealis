@@ -756,6 +756,8 @@ class View
      */
     void setId(std::string id);
 
+    std::string getId() const { return this->id; }
+
     /**
      * Overrides align items of the parent box.
      *

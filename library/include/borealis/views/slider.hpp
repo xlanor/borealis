@@ -43,6 +43,8 @@ class Slider : public Box
 
     void setStep(float step);
 
+    void setDiscreteStep(float step);
+
     void setPointerSize(float size);
 
     static View* create();
@@ -56,6 +58,9 @@ class Slider : public Box
 
     float progress = 1;
     float step = 0.5f;
+    float discreteStep = 0.0f;
+    int navPrevDir = 0;
+    int navRepeatFrames = 0;
 
     void buttonsProcessing();
     void updateUI();

@@ -137,6 +137,33 @@ void Slider::buttonsProcessing()
         if (state.buttons[BUTTON_NAV_RIGHT] && state.buttons[BUTTON_NAV_LEFT])
             return;
 
+        if (discreteStep > 0.0f)
+        {
+            int dir = state.buttons[BUTTON_NAV_RIGHT] ? 1 : (state.buttons[BUTTON_NAV_LEFT] ? -1 : 0);
+
+            if (dir != 0)
+            {
+                if (dir != navPrevDir)
+                {
+                    setProgress(progress + dir * discreteStep);
+                    navRepeatFrames = 0;
+                }
+                else
+                {
+                    navRepeatFrames++;
+                    if (navRepeatFrames >= 18 && navRepeatFrames % 4 == 0)
+                        setProgress(progress + dir * discreteStep);
+                }
+            }
+            else
+            {
+                navRepeatFrames = 0;
+            }
+
+            navPrevDir = dir;
+            return;
+        }
+
         if (state.buttons[BUTTON_NAV_RIGHT])
         {
             setProgress(progress += step / Application::getFPS());
@@ -214,6 +241,11 @@ float Slider::getProgress()
 Event<float>* Slider::getProgressEvent()
 {
     return &progressEvent;
+}
+
+void Slider::setDiscreteStep(float step)
+{
+    this->discreteStep = step;
 }
 
 void Slider::setStep(float step)
