@@ -123,7 +123,7 @@ void ScrollingFrame::updateScrollingIndicatior()
     scrollingIndicator->setHeight(viewHeight / contentHeight * viewHeight);
 
     float scrollViewOffset = getContentOffsetY() / contentHeight * getHeight();
-    scrollingIndicator->setDetachedPosition(getWidth() - 14 - SCROLLING_INDICATOR_WIDTH, scrollViewOffset);
+    scrollingIndicator->setDetachedPosition(getWidth() - 4 - SCROLLING_INDICATOR_WIDTH, scrollViewOffset);
 }
 
 void ScrollingFrame::draw(NVGcontext* vg, float x, float y, float width, float height, Style style, FrameContext* ctx)
