@@ -24,6 +24,7 @@ namespace brls
 {
 
 #define SCROLLING_INDICATOR_WIDTH 4
+#define SCROLLING_INDICATOR_GUTTER 14
 
 ScrollingFrame::ScrollingFrame()
 {
@@ -119,11 +120,11 @@ void ScrollingFrame::updateScrollingIndicatior()
         return;
     }
 
-    scrollingIndicator->setAlpha(contentHeight <= viewHeight ? 0 : 0.3f);
+    scrollingIndicator->setAlpha(contentHeight <= viewHeight ? 0 : 0.15f);
     scrollingIndicator->setHeight(viewHeight / contentHeight * viewHeight);
 
     float scrollViewOffset = getContentOffsetY() / contentHeight * getHeight();
-    scrollingIndicator->setDetachedPosition(getWidth() - 4 - SCROLLING_INDICATOR_WIDTH, scrollViewOffset);
+    scrollingIndicator->setDetachedPosition(getWidth() - SCROLLING_INDICATOR_WIDTH - 3, scrollViewOffset);
 }
 
 void ScrollingFrame::draw(NVGcontext* vg, float x, float y, float width, float height, Style style, FrameContext* ctx)
@@ -320,7 +321,7 @@ void ScrollingFrame::onLayout()
 {
     if (this->contentView)
     {
-        this->contentView->setWidth(this->getWidth());
+        this->contentView->setWidth(this->getWidth() - SCROLLING_INDICATOR_GUTTER);
         this->contentView->invalidate();
     }
 }
