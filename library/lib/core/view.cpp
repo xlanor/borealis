@@ -618,45 +618,117 @@ void View::drawHighlight(NVGcontext* vg, Theme theme, float alpha, Style style, 
         float gradientX, gradientY, color;
         getHighlightAnimation(&gradientX, &gradientY, &color);
 
-        NVGcolor highlightColor1 = theme["brls/highlight/color1"];
+        NVGcolor multiGlow = theme["akira/highlight/multiglow"];
 
-        NVGcolor pulsationColor = RGBAf((color * highlightColor1.r) + (1 - color) * highlightColor1.r,
-            (color * highlightColor1.g) + (1 - color) * highlightColor1.g,
-            (color * highlightColor1.b) + (1 - color) * highlightColor1.b,
-            alpha);
+        if (multiGlow.a > 0.5f)
+        {
+            float glowStroke = style["brls/highlight/stroke_width"];
 
-        NVGcolor borderColor = theme["brls/highlight/color2"];
-        borderColor.a        = 0.5f * alpha * this->getAlpha();
+            NVGcolor baseStroke = theme["brls/highlight/color1"];
+            baseStroke.a        = 0.85f * alpha * this->getAlpha();
 
-        float strokeWidth = style["brls/highlight/stroke_width"];
+            nvgBeginPath(vg);
+            nvgStrokeColor(vg, baseStroke);
+            nvgStrokeWidth(vg, glowStroke);
+            nvgRoundedRect(vg, x, y, width, height, cornerRadius);
+            nvgStroke(vg);
 
-        NVGpaint border1Paint = nvgRadialGradient(vg,
-            x + gradientX * width, y + gradientY * height,
-            strokeWidth * 10, strokeWidth * 40,
-            borderColor, TRANSPARENT);
+            float cx    = x + width / 2.0f;
+            float cy    = y + height / 2.0f;
+            float rx    = width / 2.0f;
+            float ry    = height / 2.0f;
+            float theta = atan2f(gradientY - 0.5f, gradientX - 0.5f);
 
-        NVGpaint border2Paint = nvgRadialGradient(vg,
-            x + (1 - gradientX) * width, y + (1 - gradientY) * height,
-            strokeWidth * 10, strokeWidth * 40,
-            borderColor, TRANSPARENT);
+            NVGcolor glow[4] = {
+                theme["akira/highlight/glow1"],
+                theme["akira/highlight/glow2"],
+                theme["akira/highlight/glow3"],
+                theme["akira/highlight/glow4"],
+            };
 
-        nvgBeginPath(vg);
-        nvgStrokeColor(vg, pulsationColor);
-        nvgStrokeWidth(vg, strokeWidth);
-        nvgRoundedRect(vg, x, y, width, height, cornerRadius);
-        nvgStroke(vg);
+            for (int i = 0; i < 4; i++)
+            {
+                float ang   = theta + (float)i * 1.57079633f;
+                float px    = cx + cosf(ang) * rx;
+                float py    = cy + sinf(ang) * ry;
+                NVGcolor gc = glow[i];
+                gc.a        = 0.6f * alpha * this->getAlpha();
+                NVGpaint gp = nvgRadialGradient(vg, px, py,
+                    glowStroke * 6, glowStroke * 34, gc, TRANSPARENT);
+                nvgBeginPath(vg);
+                nvgStrokePaint(vg, gp);
+                nvgStrokeWidth(vg, glowStroke * 1.15f);
+                nvgRoundedRect(vg, x, y, width, height, cornerRadius);
+                nvgStroke(vg);
+            }
 
-        nvgBeginPath(vg);
-        nvgStrokePaint(vg, border1Paint);
-        nvgStrokeWidth(vg, strokeWidth);
-        nvgRoundedRect(vg, x, y, width, height, cornerRadius);
-        nvgStroke(vg);
+            NVGcolor ribbon[4] = {
+                theme["akira/highlight/ribbon1"],
+                theme["akira/highlight/ribbon2"],
+                theme["akira/highlight/ribbon3"],
+                theme["akira/highlight/ribbon4"],
+            };
 
-        nvgBeginPath(vg);
-        nvgStrokePaint(vg, border2Paint);
-        nvgStrokeWidth(vg, strokeWidth);
-        nvgRoundedRect(vg, x, y, width, height, cornerRadius);
-        nvgStroke(vg);
+            float ribInset = cornerRadius;
+            float ribWidth = width - ribInset * 2.0f;
+            if (ribWidth > 8.0f)
+            {
+                float seg  = ribWidth / 4.0f;
+                float ribY = y - glowStroke * 0.5f;
+                float ribH = glowStroke < 3.0f ? 3.0f : glowStroke;
+                for (int i = 0; i < 4; i++)
+                {
+                    NVGcolor rc = ribbon[i];
+                    rc.a        = alpha * this->getAlpha();
+                    nvgBeginPath(vg);
+                    nvgRect(vg, x + ribInset + seg * (float)i, ribY, seg + 0.5f, ribH);
+                    nvgFillColor(vg, rc);
+                    nvgFill(vg);
+                }
+            }
+        }
+        else
+        {
+            NVGcolor highlightColor1 = theme["brls/highlight/color1"];
+
+            NVGcolor pulsationColor = RGBAf((color * highlightColor1.r) + (1 - color) * highlightColor1.r,
+                (color * highlightColor1.g) + (1 - color) * highlightColor1.g,
+                (color * highlightColor1.b) + (1 - color) * highlightColor1.b,
+                alpha);
+
+            NVGcolor borderColor = theme["brls/highlight/color2"];
+            borderColor.a        = 0.5f * alpha * this->getAlpha();
+
+            float strokeWidth = style["brls/highlight/stroke_width"];
+
+            NVGpaint border1Paint = nvgRadialGradient(vg,
+                x + gradientX * width, y + gradientY * height,
+                strokeWidth * 10, strokeWidth * 40,
+                borderColor, TRANSPARENT);
+
+            NVGpaint border2Paint = nvgRadialGradient(vg,
+                x + (1 - gradientX) * width, y + (1 - gradientY) * height,
+                strokeWidth * 10, strokeWidth * 40,
+                borderColor, TRANSPARENT);
+
+            nvgBeginPath(vg);
+            nvgStrokeColor(vg, pulsationColor);
+            nvgStrokeWidth(vg, strokeWidth);
+            nvgRoundedRect(vg, x, y, width, height, cornerRadius);
+            nvgStroke(vg);
+
+            nvgBeginPath(vg);
+            nvgStrokePaint(vg, border1Paint);
+            nvgStrokeWidth(vg, strokeWidth);
+            nvgRoundedRect(vg, x, y, width, height, cornerRadius);
+            nvgStroke(vg);
+
+            nvgBeginPath(vg);
+            nvgStrokePaint(vg, border2Paint);
+            nvgStrokeWidth(vg, strokeWidth);
+            nvgRoundedRect(vg, x, y, width, height, cornerRadius);
+            nvgStroke(vg);
+        }
 #endif
     }
 

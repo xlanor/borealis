@@ -24,7 +24,7 @@ namespace brls
 {
 
 #define SCROLLING_INDICATOR_WIDTH 4
-#define SCROLLING_INDICATOR_GUTTER 14
+#define SCROLLING_INDICATOR_GUTTER 22
 
 ScrollingFrame::ScrollingFrame()
 {
