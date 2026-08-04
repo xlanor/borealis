@@ -1189,9 +1189,10 @@ void Application::blockInputs(bool muteSounds)
 
 void Application::unblockInputs()
 {
-    Application::blockInputsTokens -= 1;
+    if (Application::blockInputsTokens > 0)
+        Application::blockInputsTokens -= 1;
 
-    if (Application::blockInputsTokens <= 0)
+    if (Application::blockInputsTokens == 0)
         muteSounds = false;
 
     getGlobalHintsUpdateEvent()->fire();
