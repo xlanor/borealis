@@ -253,6 +253,8 @@ void Box::clearViews(bool free)
     {
         View* view = this->children.back();
 
+        Application::onViewRemoval(view, nullptr);
+
         // Remove it
         YGNodeRemoveChild(this->ygNode, view->getYGNode());
         this->children.pop_back();

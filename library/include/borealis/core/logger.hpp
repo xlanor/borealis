@@ -183,6 +183,23 @@ class Logger
         return &logEvent;
     }
 
+    static Event<TimePoint, LogLevel, std::string>::Subscription subscribeToLog(
+        std::function<void(TimePoint, LogLevel, std::string)> cb)
+    {
+        std::unique_lock<std::mutex> lock;
+        if (Logger::threadSafeLogging)
+            lock = std::unique_lock<std::mutex>{ logMtx };
+        return logEvent.subscribe(cb);
+    }
+
+    static void unsubscribeFromLog(Event<TimePoint, LogLevel, std::string>::Subscription sub)
+    {
+        std::unique_lock<std::mutex> lock;
+        if (Logger::threadSafeLogging)
+            lock = std::unique_lock<std::mutex>{ logMtx };
+        logEvent.unsubscribe(sub);
+    }
+
     static void setAsyncLogging(bool enabled) { asyncLogging = enabled; }
 
     static void flushAsyncLogs()

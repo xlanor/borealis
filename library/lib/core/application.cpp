@@ -233,6 +233,13 @@ bool Application::internalMainLoop()
     }
     Application::deletionPool = undeletedViews;
 
+    if (!Application::currentFocus && !Application::activitiesStack.empty())
+    {
+        View* content = Application::activitiesStack.back()->getContentView();
+        if (content)
+            Application::giveFocus(content);
+    }
+
     if (Application::limitedFrameTime > 0)
     {
         Time deltaTime = getCPUTimeUsec() - frameStartTime;
@@ -945,6 +952,23 @@ void Application::giveFocus(View* view)
 
 void Application::onViewRemoval(View* toRemove, View* focusFallback)
 {
+    for (size_t i = 0; i < Application::focusStack.size();)
+    {
+        bool inside = false;
+        for (View* v = Application::focusStack[i]; v; v = v->getParent())
+        {
+            if (v == toRemove)
+            {
+                inside = true;
+                break;
+            }
+        }
+        if (inside)
+            Application::focusStack.erase(Application::focusStack.begin() + i);
+        else
+            i++;
+    }
+
     // Check if currentFocus is inside the view being removed
     View* focus = Application::currentFocus;
     while (focus)
