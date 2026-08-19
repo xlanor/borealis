@@ -34,6 +34,8 @@
 #include <fmt/chrono.h>
 
 #include <borealis/core/event.hpp>
+#include <atomic>
+#include <cstdio>
 #include <mutex>
 #include <string>
 #include <queue>
@@ -134,9 +136,9 @@ class Logger
                     std::lock_guard<std::mutex> qLock(logQueueMtx);
                     logQueue.push(std::move(formatted));
                 }
-                else
+                else if (std::FILE* out = resolveLogOutput())
                 {
-                    fwrite(formatted.c_str(), 1, formatted.size(), logOut);
+                    fwrite(formatted.c_str(), 1, formatted.size(), out);
                 }
             }
 
@@ -209,22 +211,52 @@ class Logger
             std::lock_guard<std::mutex> qLock(logQueueMtx);
             batch.swap(logQueue);
         }
+
+        if (batch.empty())
+            return;
+
+        std::FILE* out = resolveLogOutput();
+        if (out == nullptr)
+            return;
+
         while (!batch.empty())
         {
-            fwrite(batch.front().c_str(), 1, batch.front().size(), logOut);
+            fwrite(batch.front().c_str(), 1, batch.front().size(), out);
             batch.pop();
         }
-        fflush(logOut);
+        fflush(out);
     }
 
   private:
+    /**
+     * Returns the stream to write to, or nullptr if there is nowhere to write.
+     *
+     * logOut cannot just be initialised to stdout. On newlib (devkitPro)
+     * stdout expands to a per-thread runtime lookup that stays null until
+     * stdio has been initialised for that thread, so a static initialiser can
+     * latch the null and leave every later write dereferencing it. Resolve it
+     * on first use instead, and treat a null as "nowhere to write" rather than
+     * as something to hand to fwrite.
+     */
+    static std::FILE* resolveLogOutput()
+    {
+        std::FILE* out = logOut.load(std::memory_order_acquire);
+        if (out == nullptr)
+        {
+            out = stdout;
+            if (out != nullptr)
+                logOut.store(out, std::memory_order_release);
+        }
+        return out;
+    }
+
     inline static std::mutex logMtx;
     inline static std::mutex logQueueMtx;
     inline static std::queue<std::string> logQueue;
     inline static bool asyncLogging = false;
     inline static bool threadSafeLogging = true;
     inline static Event<TimePoint, LogLevel, std::string> logEvent;
-    inline static std::FILE *logOut = stdout;
+    inline static std::atomic<std::FILE*> logOut { nullptr };
     inline static LogLevel logLevel = LogLevel::LOG_INFO;
 };
 
