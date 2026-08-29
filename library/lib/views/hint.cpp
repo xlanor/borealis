@@ -79,6 +79,15 @@ Hint::Hint(std::shared_ptr<Action> action, bool allowAButtonTouch)
     }
 }
 
+void Hint::setFontSizes(float iconSize, float textSize)
+{
+    if (iconSize > 0.0f)
+        icon->setFontSize(iconSize);
+
+    if (textSize > 0.0f)
+        hint->setFontSize(textSize);
+}
+
 std::string Hint::getKeyIcon(ControllerButton button, bool ignoreKeysSwap)
 {
     if (!ignoreKeysSwap)
@@ -234,7 +243,20 @@ void Hints::refillHints(View* focusView)
     for (auto action : actions)
     {
         Hint* hint = new Hint(action, allowAButtonTouch);
+        hint->setFontSizes(hintIconSize, hintTextSize);
         addView(hint);
+    }
+}
+
+void Hints::setHintFontSizes(float iconSize, float textSize)
+{
+    hintIconSize = iconSize;
+    hintTextSize = textSize;
+
+    for (View* child : getChildren())
+    {
+        if (auto* hint = dynamic_cast<Hint*>(child))
+            hint->setFontSizes(iconSize, textSize);
     }
 }
 

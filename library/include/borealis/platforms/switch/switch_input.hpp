@@ -64,6 +64,9 @@ class SwitchInputManager : public InputManager
 
     void sendRumbleRaw(unsigned short controller, float lowFreq, float highFreq, float lowAmp, float highAmp) override;
 
+    void sendRumbleToNpad(unsigned int npad, float lowFreq, float highFreq, float lowAmp, float highAmp) override;
+    void refreshRumbleHandles(unsigned int npad) override;
+
     void clearVibration(int controller);
 
     /*
@@ -104,6 +107,12 @@ class SwitchInputManager : public InputManager
     PadState padsState[GAMEPADS_MAX];
     HidVibrationDeviceHandle m_vibration_device_handles[GAMEPADS_MAX][2];
     HidVibrationValue m_vibration_values[GAMEPADS_MAX][2];
+    s32 m_vibration_handle_count[GAMEPADS_MAX];
+    // Not a Result any call can return, so the first send always reports. Seeded
+    // with success meant an unbroken run of accepted sends printed nothing, and
+    // silence then read the same as never having been called - which is exactly
+    // the ambiguity this exists to remove.
+    Result m_last_vibration_rc = 0xFFFFFFFF;
     u32 padsStyleSet[GAMEPADS_MAX];
     bool pointerLocked = false;
     HidMouseState currentMouseState;
@@ -121,9 +130,10 @@ class SwitchInputManager : public InputManager
     void hidInitializeKeyboardMap();
     void updateControllerStateInner(ControllerState* state, PadState* pad);
     void sendRumbleInternal(HidVibrationDeviceHandle vibration_device[2], HidVibrationValue vibration_values[2],
-        unsigned short lowFreqMotor, unsigned short highFreqMotor);
+        s32 handleCount, unsigned short lowFreqMotor, unsigned short highFreqMotor);
     void sendRumbleInternal(HidVibrationDeviceHandle vibration_device[2], HidVibrationValue vibration_values[2],
-        float lowFreq, float highFreq, float lowAmp, float highAmp);
+        s32 handleCount, float lowFreq, float highFreq, float lowAmp, float highAmp);
+    void logVibrationResult(Result rc, HidVibrationDeviceHandle handle, s32 handleCount);
 
 };
 

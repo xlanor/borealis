@@ -31,6 +31,9 @@ class Hint : public Box
     Hint(std::shared_ptr<Action> action, bool allowAButtonTouch = false);
     static std::string getKeyIcon(ControllerButton button, bool ignoreKeysSwap = false);
 
+    /* Zero for either leaves the XML's own size alone. */
+    void setFontSizes(float iconSize, float textSize);
+
   private:
     std::shared_ptr<Action> action;
 
@@ -64,6 +67,13 @@ class Hints : public Box
         return allowAButtonTouch;
     }
 
+    /*
+     * Carried on the row rather than set on each hint, because the hints are
+     * rebuilt from scratch every time focus or availability changes - anything
+     * applied to a child is gone by the next rebuild.
+     */
+    void setHintFontSizes(float iconSize, float textSize);
+
     static View* create();
 
   private:
@@ -71,6 +81,8 @@ class Hints : public Box
     bool addUnableAButtonAction = true;
     bool allowAButtonTouch      = false;
     bool forceShown             = false;
+    float hintIconSize          = 0.0f;
+    float hintTextSize          = 0.0f;
 
     VoidEvent::Subscription hintSubscription;
 };

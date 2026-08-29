@@ -343,6 +343,35 @@ class InputManager
     virtual void sendRumbleRaw(unsigned short controller, float lowFreq, float highFreq, float lowAmp, float highAmp) {};
 
     /**
+     * Rumble a pad named by its npad id rather than by a positional index.
+     *
+     * sendRumbleRaw takes a controller *slot*, which it then shifts by one when
+     * handheld is active - so who receives it depends on how the console
+     * happens to be held. A caller that already knows which physical pad it
+     * means needs to say so directly.
+     *
+     * npad is a HidNpadIdType on Switch; the parameter is untyped so this
+     * header stays platform-agnostic. No-op where the platform has no concept
+     * of one.
+     */
+    virtual void sendRumbleToNpad(unsigned int npad, float lowFreq, float highFreq, float lowAmp, float highAmp) {};
+
+    /**
+     * Rebuild the vibration device handles for one pad.
+     *
+     * Handles encode the controller style, and one built for the wrong style
+     * addresses a device that does not exist - vibration is then dropped with
+     * no error. They are normally refreshed by the controller-state loop when
+     * it sees a style change, which is fine while that loop is running; an app
+     * that blocks input while streaming stops it, and is then left sending to
+     * whatever handles existed when it stopped.
+     *
+     * Call this when starting to rumble a pad that the input loop has not been
+     * watching.
+     */
+    virtual void refreshRumbleHandles(unsigned int npad) {};
+
+    /**
      * Called once every runloop cycle to perform some cleanup before new one.
      * For internal call only
      */

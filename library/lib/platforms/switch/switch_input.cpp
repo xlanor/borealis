@@ -162,9 +162,44 @@ SwitchInputManager::~SwitchInputManager()
 
 void SwitchInputManager::clearVibration(int controller)
 {
-    Logger::debug("Vibration clear #{}", controller);
-    hidInitializeVibrationDevices(m_vibration_device_handles[controller], 2, (HidNpadIdType)controller, HidNpadStyleTag_NpadJoyDual);
-    sendRumbleInternal(m_vibration_device_handles[controller], m_vibration_values[controller], 160.0f, 320.0f, 0.0f, 0.0f);
+    // The style is encoded into HidVibrationDeviceHandle.npad_style_index, so it has to match
+    // the style the pad actually reports. A handle built for the wrong style addresses a device
+    // that does not exist and vibration is silently dropped.
+    u32 styleSet = this->padsState[controller].style_set;
+
+    HidNpadStyleTag style = HidNpadStyleTag_NpadFullKey;
+    s32 handleCount       = 2;
+
+    if (styleSet & HidNpadStyleTag_NpadFullKey)
+    {
+        style       = HidNpadStyleTag_NpadFullKey;
+        handleCount = 2;
+    }
+    else if (styleSet & HidNpadStyleTag_NpadJoyDual)
+    {
+        style       = HidNpadStyleTag_NpadJoyDual;
+        handleCount = 2;
+    }
+    else if (styleSet & HidNpadStyleTag_NpadJoyLeft)
+    {
+        style       = HidNpadStyleTag_NpadJoyLeft;
+        handleCount = 1;
+    }
+    else if (styleSet & HidNpadStyleTag_NpadJoyRight)
+    {
+        style       = HidNpadStyleTag_NpadJoyRight;
+        handleCount = 1;
+    }
+
+    m_vibration_handle_count[controller] = handleCount;
+
+    Logger::debug("Vibration clear #{} style_set=0x{:x} style=0x{:x} handles={}", controller, styleSet, (u32)style, handleCount);
+
+    Result rc = hidInitializeVibrationDevices(m_vibration_device_handles[controller], handleCount, (HidNpadIdType)controller, style);
+    if (R_FAILED(rc))
+        Logger::warning("Vibration init failed for #{} (style 0x{:x}): 0x{:x}", controller, (u32)style, rc);
+
+    sendRumbleInternal(m_vibration_device_handles[controller], m_vibration_values[controller], handleCount, 160.0f, 320.0f, 0.0f, 0.0f);
 }
 
 void SwitchInputManager::updateUnifiedControllerState(ControllerState* state)
@@ -313,7 +348,28 @@ void SwitchInputManager::updateTouchStates(std::vector<RawTouchState>* states)
     }
 }
 
-void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_device[2], HidVibrationValue vibration_values[2], unsigned short lowFreqMotor, unsigned short highFreqMotor)
+// hidSendVibrationValues accepts a handle for a device that does not exist and reports
+// success or failure, and this return was discarded - which made "HOS refused it" and
+// "HOS took it and nothing happened" the same observation from the outside. Logged on
+// change only, so a steady stream at 200 Hz says it once rather than flooding.
+void SwitchInputManager::logVibrationResult(Result rc, HidVibrationDeviceHandle handle, s32 handleCount)
+{
+    if (rc == m_last_vibration_rc)
+        return;
+
+    m_last_vibration_rc = rc;
+
+    if (R_FAILED(rc))
+        Logger::warning("Vibration send failed: 0x{:x} (style_index={} player={} device={} handles={})",
+            rc, (unsigned)handle.npad_style_index, (unsigned)handle.player_number,
+            (unsigned)handle.device_idx, handleCount);
+    else
+        Logger::info("Vibration send accepted (style_index={} player={} device={} handles={})",
+            (unsigned)handle.npad_style_index, (unsigned)handle.player_number,
+            (unsigned)handle.device_idx, handleCount);
+}
+
+void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_device[2], HidVibrationValue vibration_values[2], s32 handleCount, unsigned short lowFreqMotor, unsigned short highFreqMotor)
 {
     float low  = (float)lowFreqMotor / 0xFFFF;
     float high = (float)highFreqMotor / 0xFFFF;
@@ -328,11 +384,12 @@ void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_d
     vibration_values[1].amp_high  = high;
     vibration_values[1].freq_high = high * 100;
 
-    hidSendVibrationValues(vibration_device, vibration_values, 2);
+    logVibrationResult(hidSendVibrationValues(vibration_device, vibration_values, handleCount),
+        vibration_device[0], handleCount);
 }
 
 void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_device[2], HidVibrationValue vibration_values[2],
-    float lowFreq, float highFreq, float lowAmp, float highAmp)
+    s32 handleCount, float lowFreq, float highFreq, float lowAmp, float highAmp)
 {
     vibration_values[0].amp_low   = lowAmp;
     vibration_values[0].freq_low  = lowFreq;
@@ -344,7 +401,8 @@ void SwitchInputManager::sendRumbleInternal(HidVibrationDeviceHandle vibration_d
     vibration_values[1].amp_high  = highAmp;
     vibration_values[1].freq_high = highFreq;
 
-    hidSendVibrationValues(vibration_device, vibration_values, 2);
+    logVibrationResult(hidSendVibrationValues(vibration_device, vibration_values, handleCount),
+        vibration_device[0], handleCount);
 }
 
 void SwitchInputManager::sendRumbleRaw(unsigned short controller, float lowFreq, float highFreq, float lowAmp, float highAmp)
@@ -352,12 +410,47 @@ void SwitchInputManager::sendRumbleRaw(unsigned short controller, float lowFreq,
     padUpdate(&this->padStateHandheld);
     if (controller == 0 && padStateHandheld.active_handheld)
     {
-        sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, lowFreq, highFreq, lowAmp, highAmp);
+        sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, 2, lowFreq, highFreq, lowAmp, highAmp);
         return;
     }
 
     int localController = padStateHandheld.active_handheld ? controller - 1 : controller;
-    sendRumbleInternal(m_vibration_device_handles[localController], m_vibration_values[localController], lowFreq, highFreq, lowAmp, highAmp);
+    sendRumbleInternal(m_vibration_device_handles[localController], m_vibration_values[localController], m_vibration_handle_count[localController], lowFreq, highFreq, lowAmp, highAmp);
+}
+
+void SwitchInputManager::refreshRumbleHandles(unsigned int npad)
+{
+    if (npad >= GAMEPADS_MAX)
+        return;
+
+    // padUpdate first: style_set is what clearVibration keys the handles on, and
+    // the copy held here is only as fresh as the last poll - which is the whole
+    // problem this exists to solve.
+    padUpdate(&this->padsState[npad]);
+    padsStyleSet[npad] = this->padsState[npad].style_set;
+    clearVibration((int)npad);
+}
+
+void SwitchInputManager::sendRumbleToNpad(unsigned int npad, float lowFreq, float highFreq, float lowAmp, float highAmp)
+{
+    // Handheld is not in the player-numbered array; it has its own pair.
+    if (npad == HidNpadIdType_Handheld)
+    {
+        sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, 2, lowFreq, highFreq, lowAmp, highAmp);
+        return;
+    }
+
+    if (npad >= GAMEPADS_MAX)
+        return;
+
+    // updateControllerState re-runs clearVibration for every connected pad
+    // whenever its style set changes, so these handles are already current for
+    // whichever style the pad is reporting right now.
+    if (m_vibration_handle_count[npad] <= 0)
+        return;
+
+    sendRumbleInternal(m_vibration_device_handles[npad], m_vibration_values[npad],
+        m_vibration_handle_count[npad], lowFreq, highFreq, lowAmp, highAmp);
 }
 
 void SwitchInputManager::sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor)
@@ -365,12 +458,12 @@ void SwitchInputManager::sendRumble(unsigned short controller, unsigned short lo
     padUpdate(&this->padStateHandheld);
     if (controller == 0 && padStateHandheld.active_handheld)
     {
-        sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, lowFreqMotor, highFreqMotor);
+        sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, 2, lowFreqMotor, highFreqMotor);
         return;
     }
 
     int localController = padStateHandheld.active_handheld ? controller - 1 : controller;
-    sendRumbleInternal(m_vibration_device_handles[localController], m_vibration_values[localController], lowFreqMotor, highFreqMotor);
+    sendRumbleInternal(m_vibration_device_handles[localController], m_vibration_values[localController], m_vibration_handle_count[localController], lowFreqMotor, highFreqMotor);
 }
 
 void SwitchInputManager::updateMouseStates(RawMouseState* state)
