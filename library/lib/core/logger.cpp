@@ -35,12 +35,12 @@ LogLevel Logger::getLogLevel()
 
 void Logger::setLogOutput(std::FILE *newLogOut)
 {
-    Logger::logOut = newLogOut;
+    Logger::logOut.store(newLogOut, std::memory_order_release);
 }
 
 std::FILE* Logger::getLogOutput()
 {
-    return Logger::logOut;
+    return Logger::resolveLogOutput();
 }
 
 void Logger::setThreadSafeLogging(bool newThreadSafeLogging) {

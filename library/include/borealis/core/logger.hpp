@@ -34,6 +34,8 @@
 #include <fmt/chrono.h>
 
 #include <borealis/core/event.hpp>
+#include <atomic>
+#include <cstdio>
 #include <mutex>
 #include <string>
 #include <queue>
@@ -134,9 +136,9 @@ class Logger
                     std::lock_guard<std::mutex> qLock(logQueueMtx);
                     logQueue.push(std::move(formatted));
                 }
-                else
+                else if (std::FILE* out = resolveLogOutput())
                 {
-                    fwrite(formatted.c_str(), 1, formatted.size(), logOut);
+                    fwrite(formatted.c_str(), 1, formatted.size(), out);
                 }
             }
 
@@ -209,22 +211,42 @@ class Logger
             std::lock_guard<std::mutex> qLock(logQueueMtx);
             batch.swap(logQueue);
         }
+
+        std::FILE* out = resolveLogOutput();
+        if (out == nullptr)
+            return;
+
         while (!batch.empty())
         {
-            fwrite(batch.front().c_str(), 1, batch.front().size(), logOut);
+            fwrite(batch.front().c_str(), 1, batch.front().size(), out);
             batch.pop();
         }
-        fflush(logOut);
+        fflush(out);
     }
 
   private:
+    /**
+     * Returns the stream to write to, or nullptr if there is nowhere to write.
+     *
+     * logOut can be null, because setLogOutput() accepts the result of a
+     * failed fopen() or a saved stream that was never set. A null falls back
+     * to stdout, which is read on each call rather than in a static
+     * initialiser. Nothing is written back to logOut, so this cannot overwrite
+     * a concurrent setLogOutput().
+     */
+    static std::FILE* resolveLogOutput()
+    {
+        std::FILE* out = logOut.load(std::memory_order_acquire);
+        return out != nullptr ? out : stdout;
+    }
+
     inline static std::mutex logMtx;
     inline static std::mutex logQueueMtx;
     inline static std::queue<std::string> logQueue;
     inline static bool asyncLogging = false;
     inline static bool threadSafeLogging = true;
     inline static Event<TimePoint, LogLevel, std::string> logEvent;
-    inline static std::FILE *logOut = stdout;
+    inline static std::atomic<std::FILE*> logOut { nullptr };
     inline static LogLevel logLevel = LogLevel::LOG_INFO;
 };
 
