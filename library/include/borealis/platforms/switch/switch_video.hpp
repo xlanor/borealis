@@ -108,4 +108,6 @@ class SwitchVideoContext : public VideoContext
     std::mutex frameMutex;
 };
 
+using SwitchDeko3dVideoContext = SwitchVideoContext;
+
 } // namespace brls
